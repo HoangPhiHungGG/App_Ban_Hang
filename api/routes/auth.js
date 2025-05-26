@@ -1,33 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const User = require("../models/user");
-// const { sendVerificationEmail } = require("../utils/email");
-// const { generateVerificationToken } = require("../utils/helpers");
-// const jwt = require("jsonwebtoken");
-// const bcrypt = require("bcrypt"); // Import bcrypt
-// require("dotenv").config();
-
-// const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
-
-// router.post("/register", async (req, res) => {
-//   // ... implementation from index.js (adapted for router) ...
-//   // Remember to hash password here before saving newUser.password = await bcrypt.hash(...)
-// });
-
-// router.get("/verify/:token", async (req, res) => {
-//   // ... implementation from index.js (adapted for router) ...
-// });
-
-// router.post("/login", async (req, res) => {
-//   // ... implementation from index.js (adapted for router) ...
-//   // Use user.comparePassword(password) instead of direct comparison
-// });
-
-// module.exports = router;
-
-// // --- For now, keep routes in index.js for simplicity of this example ---
-// module.exports = null; // Indicate this file is currently unused if routes are in index.js
-
 const express = require("express");
 const router = express.Router(); // <<< Sử dụng Router của Express
 const mongoose = require("mongoose");
@@ -101,7 +71,7 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
     // Compare password: const isMatch = await user.comparePassword(password);
-    const isMatch = user.password === password; // <<< TEMPORARY
+    const isMatch = user.password === password; // <<< TEMPORARY VÀ SAI NẾU ĐÃ HASH MẬT KHẨU
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
     if (!user.verified && user.role !== "admin") {
@@ -111,7 +81,7 @@ router.post("/login", async (req, res) => {
         .json({ message: "Please verify your email first." });
     }
     const payload = { userId: user._id, role: user.role };
-    const token = jwt.sign(payload, JWT_SECRET_KEY, { expiresIn: "3d" });
+    const token = jwt.sign(payload, JWT_SECRET_KEY, { expiresIn: "300d" });
     res.status(200).json({ token });
   } catch (error) {
     console.error("Login Error:", error);

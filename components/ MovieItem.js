@@ -80,8 +80,6 @@ const MovieItem = ({ item }) => {
 
 export default MovieItem;
 
-// Add placeholder_poster.png to your assets folder
-
 const styles = StyleSheet.create({
   container: {
     margin: 10,

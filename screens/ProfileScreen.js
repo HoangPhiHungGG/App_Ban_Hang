@@ -304,9 +304,7 @@ const ProfileScreen = () => {
                 </Pressable>
               ))
             ) : (
-              <Text style={{ marginTop: 20, textAlign: "center" }}>
-                No bookings found
-              </Text>
+              <Text style={{ marginTop: 20, textAlign: "center" }}></Text>
             )}
           </ScrollView>
         </>

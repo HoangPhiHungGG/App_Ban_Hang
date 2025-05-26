@@ -40,14 +40,14 @@ const HomeScreen = () => {
   // --- Dropdown Items --- (Giữ nguyên)
   const [genres, setGenres] = useState([
     { label: "Tất cả thể loại", value: null },
-    { label: "Hành động", value: "Action" },
-    { label: "Hài", value: "Comedy" },
-    { label: "Tình cảm", value: "Drama" },
-    { label: "Khoa học viễn tưởng", value: "Sci-Fi" },
-    { label: "Kinh dị", value: "Horror" },
-    { label: "Lãng mạn", value: "Romance" },
-    { label: "Hoạt hình", value: "Animation" },
-    { label: "Giật gân", value: "Thriller" },
+    { label: "Hành động", value: "Hành động" },
+    { label: "Hài hước", value: "Hài hước" },
+    { label: "Tình cảm", value: "Tình cảm" },
+    { label: "Khoa học viễn tưởng", value: "Khoa học viễn tưởng" },
+    { label: "Kinh dị", value: "Kinh dị" },
+    { label: "Lãng mạn", value: "Lãng mạn" },
+    { label: "Hoạt hình", value: "Hoạt hình" },
+    { label: "Giật gân", value: "Giật gân" },
   ]);
   const [languages, setLanguages] = useState([
     { label: "Tất cả ngôn ngữ", value: null },
@@ -61,6 +61,7 @@ const HomeScreen = () => {
   const [statuses, setStatuses] = useState([
     { label: "Đang chiếu", value: "now_showing" },
     { label: "Sắp chiếu", value: "coming_soon" },
+    { label: "Đã kết thúc", value: "ended" },
   ]);
 
   // --- Fetching Data --- (Giữ nguyên)
@@ -117,9 +118,9 @@ const HomeScreen = () => {
 
   // --- Banner Images --- (Giữ nguyên)
   const bannerImages = [
-    "https://image.tmdb.org/t/p/original/kDp1vUBnMpeSGlGaHfKPZneHnUZ.jpg",
-    "https://image.tmdb.org/t/p/original/cDJ61O180tZNfS6B4MBLJkuzgpr.jpg",
-    "https://image.tmdb.org/t/p/original/nTPFkLUARmo1bYHfkfdkWCcHMEk.jpg",
+    "https://img.pikbest.com/wp/202346/popcorn-movies-blank-movie-ticket-with-bucket-filmstrip-clapperboard-and-camera-in-3d-render_9715279.jpg!w700wp",
+    "https://img.pikbest.com/wp/202405/cinema-ticket-movie-individual-seats-placed-on-red-carpet-with-for-a-perfect-night-3d-render_9799117.jpg!f305cw",
+    "https://img.pikbest.com/wp/202405/clapperboard-online-ratings-and-views-concept-3d-render-of-on-a-blue-background-for-cinemas_9797067.jpg!f305cw",
   ];
 
   // --- Render Header Component for FlatList ---

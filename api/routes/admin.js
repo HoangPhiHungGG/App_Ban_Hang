@@ -1,356 +1,3 @@
-// // module.exports = null;
-
-// const express = require("express");
-// const router = express.Router();
-// const mongoose = require("mongoose");
-// const User = require("../models/user");
-// const Cinema = require("../models/cinema");
-// const Showtime = require("../models/showtime");
-// const Booking = require("../models/booking");
-// const Review = require("../models/review");
-// const Movie = require("../models/movie"); // Cần cho delete showtime/review
-// const { authenticateToken, isAdmin } = require("../middleware/auth"); // <<< Quan trọng: Apply middleware
-
-// // <<< Áp dụng middleware cho tất cả các route trong file này >>>
-// router.use(authenticateToken);
-// router.use(isAdmin);
-
-// // --- User Management ---
-// // GET /admin/users
-// router.get("/users", async (req, res) => {
-//   try {
-//     const { search, role, verified } = req.query;
-//     let filter = {};
-//     if (search)
-//       filter.$or = [
-//         { name: { $regex: search.trim(), $options: "i" } },
-//         { email: { $regex: search.trim(), $options: "i" } },
-//       ];
-//     if (role && ["user", "admin"].includes(role)) filter.role = role;
-//     if (verified !== undefined && ["true", "false"].includes(verified))
-//       filter.verified = verified === "true";
-//     const users = await User.find(filter)
-//       .select("-password -verificationToken")
-//       .sort({ createdAt: -1 });
-//     res.status(200).json(users);
-//   } catch (error) {
-//     console.error("Admin Users Fetch Error:", error);
-//     res.status(500).json({ message: "Error fetching users" });
-//   }
-// });
-
-// // PUT /admin/users/:id
-// router.put("/users/:id", async (req, res) => {
-//   try {
-//     const userId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(userId))
-//       return res.status(400).json({ message: "Invalid User ID" });
-//     const { name, role, verified } = req.body;
-//     const updateData = {};
-//     if (name) updateData.name = name.trim();
-//     if (role && ["user", "admin"].includes(role)) updateData.role = role;
-//     if (verified !== undefined && typeof verified === "boolean")
-//       updateData.verified = verified;
-//     if (Object.keys(updateData).length === 0)
-//       return res.status(400).json({ message: "No valid fields to update" });
-//     if (userId === req.user.userId && updateData.role !== "admin")
-//       return res
-//         .status(400)
-//         .json({ message: "Admin cannot demote themselves" }); // Ngăn admin tự hạ cấp
-//     if (userId === req.user.userId && updateData.verified === false)
-//       return res.status(400).json({ message: "Admin cannot ban themselves" }); // Ngăn admin tự khóa
-
-//     const updatedUser = await User.findByIdAndUpdate(
-//       userId,
-//       { $set: updateData },
-//       { new: true, runValidators: true }
-//     ).select("-password -verificationToken");
-//     if (!updatedUser)
-//       return res.status(404).json({ message: "User not found" });
-//     console.log(`Admin: Updated user ${userId}`);
-//     res.status(200).json({ message: "User updated", user: updatedUser });
-//   } catch (error) {
-//     console.error(`Admin User Update Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error updating user" });
-//   }
-// });
-
-// // DELETE /admin/users/:id
-// router.delete("/users/:id", async (req, res) => {
-//   try {
-//     const userId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(userId))
-//       return res.status(400).json({ message: "Invalid User ID" });
-//     if (userId === req.user.userId)
-//       return res
-//         .status(400)
-//         .json({ message: "Cannot delete own admin account" });
-//     const deletedUser = await User.findByIdAndDelete(userId);
-//     if (!deletedUser)
-//       return res.status(404).json({ message: "User not found" });
-//     // TODO: Consider deleting related data (Bookings, Reviews)
-//     console.log(`Admin: Deleted user ${userId}`);
-//     res.status(200).json({ message: `User "${deletedUser.name}" deleted` });
-//   } catch (error) {
-//     console.error(`Admin User Delete Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error deleting user" });
-//   }
-// });
-
-// // --- Cinema Management (Routes đã có trong movies.js, không cần lặp lại ở đây nếu dùng prefix)---
-// // POST /admin/cinemas -> sẽ được mount ở index.js là /cinemas/admin
-// // PUT /admin/cinemas/:id -> sẽ được mount ở index.js là /cinemas/admin/:id
-// // DELETE /admin/cinemas/:id -> sẽ được mount ở index.js là /cinemas/admin/:id
-
-// // --- Showtime Management ---
-// // POST /admin/showtimes
-// router.post("/showtimes", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const { movie, cinema, screenName, startTime, pricePerSeat } = req.body;
-//     if (!movie || !cinema || !screenName || !startTime || pricePerSeat == null)
-//       return res.status(400).json({ message: "Missing required fields" });
-//     if (
-//       !mongoose.Types.ObjectId.isValid(movie) ||
-//       !mongoose.Types.ObjectId.isValid(cinema)
-//     )
-//       return res.status(400).json({ message: "Invalid Movie/Cinema ID" });
-//     if (typeof pricePerSeat !== "number" || pricePerSeat < 0)
-//       return res.status(400).json({ message: "Invalid price" });
-//     const startTimeDate = new Date(startTime);
-//     if (isNaN(startTimeDate))
-//       return res.status(400).json({ message: "Invalid startTime" });
-//     const movieDoc = await Movie.findById(movie).select("duration");
-//     if (!movieDoc) return res.status(404).json({ message: "Movie not found" });
-//     const endTimeDate = new Date(
-//       startTimeDate.getTime() + movieDoc.duration * 60000
-//     );
-//     const newShowtime = new Showtime({
-//       movie,
-//       cinema,
-//       screenName,
-//       startTime: startTimeDate,
-//       endTime: endTimeDate,
-//       pricePerSeat,
-//     });
-//     await newShowtime.save();
-//     console.log("Admin: Showtime created:", newShowtime._id);
-//     res
-//       .status(201)
-//       .json({ message: "Showtime created", showtime: newShowtime });
-//   } catch (error) {
-//     console.error("Admin Showtime Create Error:", error);
-//     res.status(500).json({ message: "Error creating showtime" });
-//   }
-// });
-
-// // PUT /admin/showtimes/:id
-// router.put("/showtimes/:id", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const showtimeId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(showtimeId))
-//       return res.status(400).json({ message: "Invalid ID" });
-//     const updateData = req.body;
-//     delete updateData._id;
-//     delete updateData.movie;
-//     delete updateData.cinema;
-//     delete updateData.bookedSeats;
-//     if (updateData.startTime) {
-//       const showtime = await Showtime.findById(showtimeId).populate(
-//         "movie",
-//         "duration"
-//       );
-//       if (!showtime)
-//         return res.status(404).json({ message: "Showtime not found" });
-//       const startTimeDate = new Date(updateData.startTime);
-//       if (isNaN(startTimeDate))
-//         return res.status(400).json({ message: "Invalid startTime" });
-//       updateData.endTime = new Date(
-//         startTimeDate.getTime() + showtime.movie.duration * 60000
-//       );
-//     }
-//     const updatedShowtime = await Showtime.findByIdAndUpdate(
-//       showtimeId,
-//       { $set: updateData },
-//       { new: true, runValidators: true }
-//     );
-//     if (!updatedShowtime)
-//       return res.status(404).json({ message: "Showtime not found" });
-//     console.log(`Admin: Updated showtime ${showtimeId}`);
-//     res
-//       .status(200)
-//       .json({ message: "Showtime updated", showtime: updatedShowtime });
-//   } catch (error) {
-//     console.error(`Admin Showtime Update Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error updating showtime" });
-//   }
-// });
-
-// // DELETE /admin/showtimes/:id
-// router.delete("/showtimes/:id", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const showtimeId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(showtimeId))
-//       return res.status(400).json({ message: "Invalid ID" });
-//     const existingBookings = await Booking.countDocuments({
-//       showtime: showtimeId,
-//     });
-//     if (existingBookings > 0)
-//       return res.status(400).json({
-//         message: `Cannot delete showtime with ${existingBookings} booking(s).`,
-//       });
-//     const deletedShowtime = await Showtime.findByIdAndDelete(showtimeId);
-//     if (!deletedShowtime)
-//       return res.status(404).json({ message: "Showtime not found" });
-//     console.log(`Admin: Deleted showtime ${showtimeId}`);
-//     res.status(200).json({ message: `Showtime deleted` });
-//   } catch (error) {
-//     console.error(`Admin Showtime Delete Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error deleting showtime" });
-//   }
-// });
-
-// // --- Booking Management ---
-// // GET /admin/bookings
-// router.get("/bookings", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const { userId, movieId, cinemaId, date, status } = req.query;
-//     let filter = {};
-//     if (userId && mongoose.Types.ObjectId.isValid(userId)) filter.user = userId;
-//     if (movieId && mongoose.Types.ObjectId.isValid(movieId))
-//       filter.movie = movieId;
-//     if (cinemaId && mongoose.Types.ObjectId.isValid(cinemaId))
-//       filter.cinema = cinemaId;
-//     if (status && ["pending", "paid", "failed", "refunded"].includes(status))
-//       filter.paymentStatus = status;
-//     if (date) {
-//       const targetDate = new Date(date);
-//       if (!isNaN(targetDate)) {
-//         const startOfDay = new Date(targetDate);
-//         startOfDay.setHours(0, 0, 0, 0);
-//         const endOfDay = new Date(targetDate);
-//         endOfDay.setHours(23, 59, 59, 999);
-//         filter.bookingDate = { $gte: startOfDay, $lte: endOfDay };
-//       }
-//     }
-//     const bookings = await Booking.find(filter)
-//       .populate("user", "name email")
-//       .populate("movie", "title")
-//       .populate("cinema", "name")
-//       .populate("showtime", "startTime screenName")
-//       .sort({ bookingDate: -1 });
-//     res.status(200).json({ bookings: bookings }); // Simplified response for now
-//   } catch (error) {
-//     console.error("Admin Bookings Fetch Error:", error);
-//     res.status(500).json({ message: "Error fetching bookings" });
-//   }
-// });
-
-// // PUT /admin/bookings/:id
-// router.put("/bookings/:id", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const bookingId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(bookingId))
-//       return res.status(400).json({ message: "Invalid ID" });
-//     const { paymentStatus } = req.body;
-//     if (
-//       !paymentStatus ||
-//       !["pending", "paid", "failed", "refunded"].includes(paymentStatus)
-//     )
-//       return res.status(400).json({ message: "Invalid paymentStatus" });
-//     const updatedBooking = await Booking.findByIdAndUpdate(
-//       bookingId,
-//       { $set: { paymentStatus: paymentStatus } },
-//       { new: true, runValidators: true }
-//     );
-//     if (!updatedBooking)
-//       return res.status(404).json({ message: "Booking not found" });
-//     console.log(
-//       `Admin: Updated booking ${bookingId} status to ${paymentStatus}`
-//     );
-//     res
-//       .status(200)
-//       .json({ message: "Booking status updated", booking: updatedBooking });
-//   } catch (error) {
-//     console.error(`Admin Booking Update Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error updating booking" });
-//   }
-// });
-
-// // DELETE /admin/bookings/:id
-// router.delete("/bookings/:id", async (req, res) => {
-//   /* ... logic từ index.js ... */
-//   try {
-//     const bookingId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(bookingId))
-//       return res.status(400).json({ message: "Invalid ID" });
-//     const deletedBooking = await Booking.findByIdAndDelete(bookingId);
-//     if (!deletedBooking)
-//       return res.status(404).json({ message: "Booking not found" });
-//     try {
-//       await Showtime.updateOne(
-//         { _id: deletedBooking.showtime },
-//         { $pull: { bookedSeats: { $in: deletedBooking.seats } } }
-//       );
-//     } catch (showtimeError) {
-//       console.error(
-//         `Admin: Failed to free seats for deleted booking ${bookingId}:`,
-//         showtimeError
-//       );
-//     }
-//     try {
-//       await User.updateOne(
-//         { _id: deletedBooking.user },
-//         { $pull: { bookings: deletedBooking._id } }
-//       );
-//     } catch (userUpdateError) {
-//       console.error(
-//         `Admin: Failed to remove booking ref from user ${deletedBooking.user}:`,
-//         userUpdateError
-//       );
-//     }
-//     console.log(`Admin: Deleted booking ${bookingId}`);
-//     res
-//       .status(200)
-//       .json({ message: `Booking ID "${deletedBooking.bookingId}" deleted` });
-//   } catch (error) {
-//     console.error(`Admin Booking Delete Error (${req.params.id}):`, error);
-//     res.status(500).json({ message: "Error deleting booking" });
-//   }
-// });
-
-// // --- Review Management ---
-// // DELETE /admin/reviews/:id
-// router.delete("/reviews/:id", async (req, res) => {
-//   // <<< Route mới
-//   try {
-//     const reviewId = req.params.id;
-//     if (!mongoose.Types.ObjectId.isValid(reviewId))
-//       return res.status(400).json({ message: "Invalid Review ID" });
-//     // Dùng findOneAndDelete để trigger post hook (cập nhật rating phim)
-//     const deletedReview = await Review.findOneAndDelete({ _id: reviewId });
-//     if (!deletedReview)
-//       return res.status(404).json({ message: "Review not found" });
-//     console.log(`Admin: Deleted review ${reviewId}`);
-//     res.status(200).json({ message: `Review deleted successfully` });
-//   } catch (error) {
-//     console.error(`Admin Review Delete Error (${req.params.id}):`, error);
-//     res
-//       .status(500)
-//       .json({ message: "Error deleting review", error: error.message });
-//   }
-// });
-
-// module.exports = router;
-
-//
-
-// --- START OF FILE api/routes/admin.js ---
-
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
@@ -517,59 +164,217 @@ router.delete("/users/:id", async (req, res) => {
       .json({ message: "Error deleting user", error: error.message });
   }
 });
-
-// =========================
 // == MOVIE MANAGEMENT =====
 // =========================
-// Note: Assumes POST/PUT/DELETE are handled here under /admin prefix
-// If they are handled in routes/movies.js, remove them from here.
-
 // POST /admin/movies - Create a new movie
 router.post("/movies", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
     const newMovie = new Movie(req.body);
     await newMovie.save();
-    res.status(201).json({ message: "Movie created", movie: newMovie });
+    console.log("Admin: Movie created:", newMovie._id);
+    res
+      .status(201)
+      .json({ message: "Movie created successfully", movie: newMovie });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error("Admin: Error creating movie:", error);
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error creating movie", error: error.message });
   }
 });
 
 // PUT /admin/movies/:id - Update a movie
 router.put("/movies/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
+    const movieId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(movieId)) {
+      return res.status(400).json({ message: "Invalid Movie ID format" });
+    }
+
+    const receivedData = req.body;
+    console.log(
+      `Admin: Received update data for movie ${movieId}:`,
+      JSON.stringify(receivedData, null, 2)
+    );
+
+    const allowedUpdates = [
+      "title",
+      "description",
+      "posterImage",
+      "bannerImage",
+      "trailerUrl",
+      "genre",
+      "language",
+      "duration",
+      "releaseDate",
+      "status",
+      "cast",
+      "director",
+      "country",
+    ];
+
+    const updateFields = {}; // Object để xây dựng các trường $set
+
+    for (const key of allowedUpdates) {
+      if (receivedData.hasOwnProperty(key)) {
+        // Chỉ xử lý nếu trường được gửi từ client
+        let value = receivedData[key];
+
+        // Xử lý đặc biệt cho từng loại dữ liệu nếu cần
+        if (
+          key === "title" ||
+          key === "description" ||
+          key === "posterImage" ||
+          key === "bannerImage" ||
+          key === "trailerUrl" ||
+          key === "director" ||
+          key === "country" ||
+          key === "language"
+        ) {
+          if (typeof value === "string") {
+            value = value.trim();
+            if (
+              value === "" &&
+              (key === "bannerImage" ||
+                key === "trailerUrl" ||
+                key === "director" ||
+                key === "country")
+            ) {
+              // Cho phép xóa các trường optional bằng cách gửi chuỗi rỗng, sẽ được set thành undefined
+              updateFields[key] = undefined; // Hoặc dùng $unset, nhưng $set: undefined cũng hiệu quả
+            } else if (value !== "") {
+              updateFields[key] = value;
+            }
+          } else if (
+            value === null &&
+            (key === "bannerImage" ||
+              key === "trailerUrl" ||
+              key === "director" ||
+              key === "country")
+          ) {
+            updateFields[key] = undefined; // Cho phép set null thành undefined
+          }
+        } else if (key === "genre" || key === "cast") {
+          if (typeof value === "string") {
+            updateFields[key] = value
+              .split(",")
+              .map((item) => item.trim())
+              .filter((item) => item);
+          } else if (Array.isArray(value)) {
+            updateFields[key] = value
+              .map((item) => (typeof item === "string" ? item.trim() : item))
+              .filter((item) => item);
+          } else {
+            updateFields[key] = []; // Mặc định là mảng rỗng nếu không hợp lệ
+          }
+        } else if (key === "duration") {
+          const numValue = parseInt(value, 10);
+          if (!isNaN(numValue) && numValue > 0) {
+            updateFields[key] = numValue;
+          } else {
+            console.warn(
+              `Admin: Invalid duration value '${value}' received for movie ${movieId}. Skipping update for duration.`
+            );
+            // Không thêm vào updateFields nếu không hợp lệ, hoặc có thể trả lỗi 400
+          }
+        } else if (key === "releaseDate") {
+          const dateValue = new Date(value);
+          if (!isNaN(dateValue.getTime())) {
+            updateFields[key] = dateValue;
+          } else {
+            console.warn(
+              `Admin: Invalid releaseDate value '${value}' received for movie ${movieId}. Skipping update for releaseDate.`
+            );
+          }
+        } else if (key === "status") {
+          // Kiểm tra giá trị status với enum trong schema
+          const movieSchemaPaths = Movie.schema.paths;
+          if (movieSchemaPaths.status && movieSchemaPaths.status.enumValues) {
+            if (movieSchemaPaths.status.enumValues.includes(value)) {
+              updateFields[key] = value;
+            } else {
+              console.warn(
+                `Admin: Invalid status value '${value}' for movie ${movieId}. Allowed: ${movieSchemaPaths.status.enumValues.join(
+                  ", "
+                )}. Skipping status update.`
+              );
+              // return res.status(400).json({ message: `Invalid status value. Allowed: ${movieSchemaPaths.status.enumValues.join(', ')}` }); // Trả lỗi nếu muốn chặt chẽ
+            }
+          } else {
+            updateFields[key] = value; // Nếu không có enum, cứ cập nhật
+          }
+        }
+      }
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res
+        .status(400)
+        .json({ message: "No valid or changed fields provided for update." });
+    }
+
+    console.log(
+      `Admin: Processed update fields for movie ${movieId}:`,
+      JSON.stringify(updateFields, null, 2)
+    );
+
     const updatedMovie = await Movie.findByIdAndUpdate(
-      id,
-      { $set: req.body },
+      movieId,
+      { $set: updateFields },
       { new: true, runValidators: true }
     );
-    if (!updatedMovie)
+
+    if (!updatedMovie) {
       return res.status(404).json({ message: "Movie not found" });
-    res.status(200).json({ message: "Movie updated", movie: updatedMovie });
+    }
+
+    console.log(`Admin: Successfully updated movie ${movieId}.`);
+    res
+      .status(200)
+      .json({ message: "Movie updated successfully", movie: updatedMovie });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin: Error updating movie ${req.params.id}:`, error);
+    if (error.name === "ValidationError") {
+      console.error("Admin: Movie update ValidationError:", error.errors);
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error updating movie", error: error.message });
   }
 });
 
 // DELETE /admin/movies/:id - Delete a movie
 router.delete("/movies/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
-    const deletedMovie = await Movie.findByIdAndDelete(id);
-    if (!deletedMovie)
+    const movieId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(movieId)) {
+      return res.status(400).json({ message: "Invalid Movie ID format" });
+    }
+    const deletedMovie = await Movie.findByIdAndDelete(movieId);
+    if (!deletedMovie) {
       return res.status(404).json({ message: "Movie not found" });
-    // TODO: Cascade delete Showtimes/Reviews/Bookings?
-    res.status(200).json({ message: `Movie "${deletedMovie.title}" deleted` });
+    }
+    // TODO: Cascade delete related Showtimes, Reviews, Bookings for this movie
+    // await Showtime.deleteMany({ movie: movieId });
+    // await Review.deleteMany({ movie: movieId }); // This will trigger rating updates
+    // await Booking.deleteMany({ movie: movieId });
+    console.log(`Admin: Deleted movie ${movieId}`);
+    res
+      .status(200)
+      .json({ message: `Movie "${deletedMovie.title}" deleted successfully` });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin: Error deleting movie ${req.params.id}:`, error);
+    res
+      .status(500)
+      .json({ message: "Error deleting movie", error: error.message });
   }
 });
 
@@ -578,50 +383,160 @@ router.delete("/movies/:id", async (req, res) => {
 // =========================
 // POST /admin/cinemas - Create a new cinema
 router.post("/cinemas", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
     const newCinema = new Cinema(req.body);
     await newCinema.save();
-    res.status(201).json({ message: "Cinema created", cinema: newCinema });
+    console.log("Admin: Cinema created:", newCinema._id);
+    res
+      .status(201)
+      .json({ message: "Cinema created successfully", cinema: newCinema });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error("Admin: Error creating cinema:", error);
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error creating cinema", error: error.message });
   }
 });
 
 // PUT /admin/cinemas/:id - Update a cinema
 router.put("/cinemas/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
-    const updatedCinema = await Cinema.findByIdAndUpdate(
-      id,
-      { $set: req.body },
-      { new: true, runValidators: true }
+    const cinemaId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(cinemaId)) {
+      return res.status(400).json({ message: "Invalid Cinema ID format" });
+    }
+
+    const receivedUpdateData = req.body;
+    console.log(
+      `Admin: Received update data for cinema ${cinemaId}:`,
+      receivedUpdateData
     );
-    if (!updatedCinema)
+
+    // --- Whitelist Approach for Cinema Fields ---
+    // Liệt kê các trường bạn cho phép cập nhật cho Cinema
+    const allowedUpdates = [
+      "name",
+      "location", // location là một object, cần xử lý cẩn thận
+      "totalScreens",
+      // Thêm các trường khác của Cinema mà bạn muốn cho phép cập nhật
+    ];
+
+    const updateData = {};
+    for (const key of allowedUpdates) {
+      if (receivedUpdateData.hasOwnProperty(key)) {
+        if (key === "location") {
+          // Nếu location được gửi lên, chỉ cập nhật các trường con được phép của location
+          updateData.location = {};
+          const allowedLocationFields = [
+            "address",
+            "city",
+            "state",
+            "postalCode",
+          ];
+          if (
+            typeof receivedUpdateData.location === "object" &&
+            receivedUpdateData.location !== null
+          ) {
+            for (const locKey of allowedLocationFields) {
+              if (
+                receivedUpdateData.location.hasOwnProperty(locKey) &&
+                receivedUpdateData.location[locKey] !== undefined
+              ) {
+                updateData.location[locKey] =
+                  receivedUpdateData.location[locKey];
+              }
+            }
+            // Nếu sau khi lọc, object location rỗng, không cần thêm nó vào updateData
+            if (Object.keys(updateData.location).length === 0) {
+              delete updateData.location;
+            }
+          }
+        } else if (key === "totalScreens") {
+          const screens = parseInt(receivedUpdateData[key], 10);
+          if (!isNaN(screens) && screens >= 0) {
+            // Cho phép 0 screen nếu hợp lệ
+            updateData[key] = screens;
+          } else {
+            console.warn(
+              `Invalid totalScreens value received: ${receivedUpdateData[key]}`
+            );
+          }
+        } else {
+          // Các trường khác, gán trực tiếp
+          updateData[key] = receivedUpdateData[key];
+        }
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json({ message: "No valid fields provided for update." });
+    }
+
+    console.log(
+      `Admin: Sanitized update data for cinema ${cinemaId}:`,
+      updateData
+    );
+
+    const updatedCinema = await Cinema.findByIdAndUpdate(
+      cinemaId,
+      { $set: updateData }, // Chỉ cập nhật các trường đã được xử lý trong updateData
+      { new: true, runValidators: true } // runValidators để kích hoạt schema validation
+    );
+
+    if (!updatedCinema) {
       return res.status(404).json({ message: "Cinema not found" });
-    res.status(200).json({ message: "Cinema updated", cinema: updatedCinema });
+    }
+
+    console.log(
+      `Admin: Successfully updated cinema ${cinemaId}:`,
+      updatedCinema
+    );
+    res
+      .status(200)
+      .json({ message: "Cinema updated successfully", cinema: updatedCinema });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin: Error updating cinema ${req.params.id}:`, error);
+    if (error.name === "ValidationError") {
+      console.error("Admin: Cinema update ValidationError:", error.errors);
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error updating cinema", error: error.message });
   }
 });
 
 // DELETE /admin/cinemas/:id - Delete a cinema
 router.delete("/cinemas/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
-    const deletedCinema = await Cinema.findByIdAndDelete(id);
-    if (!deletedCinema)
+    const cinemaId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(cinemaId)) {
+      return res.status(400).json({ message: "Invalid Cinema ID format" });
+    }
+    const deletedCinema = await Cinema.findByIdAndDelete(cinemaId);
+    if (!deletedCinema) {
       return res.status(404).json({ message: "Cinema not found" });
-    // TODO: Cascade delete Showtimes?
-    res.status(200).json({ message: `Cinema "${deletedCinema.name}" deleted` });
+    }
+    // TODO: Cascade delete related Showtimes for this cinema
+    // await Showtime.deleteMany({ cinema: cinemaId });
+    console.log(`Admin: Deleted cinema ${cinemaId}`);
+    res
+      .status(200)
+      .json({ message: `Cinema "${deletedCinema.name}" deleted successfully` });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin: Error deleting cinema ${req.params.id}:`, error);
+    res
+      .status(500)
+      .json({ message: "Error deleting cinema", error: error.message });
   }
 });
 
@@ -630,19 +545,54 @@ router.delete("/cinemas/:id", async (req, res) => {
 // =========================
 // POST /admin/showtimes - Create a new showtime
 router.post("/showtimes", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
     const { movie, cinema, screenName, startTime, pricePerSeat } = req.body;
-    // Validation...
-    if (!movie || !cinema || !screenName || !startTime || pricePerSeat == null)
-      return res.status(400).json({ message: "Missing required fields" });
-    // ... More validation ...
-    const movieDoc = await Movie.findById(movie).select("duration");
-    if (!movieDoc) return res.status(404).json({ message: "Movie not found" });
+
+    // Basic Validation
+    if (
+      !movie ||
+      !cinema ||
+      !screenName ||
+      !startTime ||
+      pricePerSeat == null
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Missing required fields for showtime creation." });
+    }
+    if (
+      !mongoose.Types.ObjectId.isValid(movie) ||
+      !mongoose.Types.ObjectId.isValid(cinema)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid Movie or Cinema ID format." });
+    }
+    if (typeof pricePerSeat !== "number" || pricePerSeat < 0) {
+      return res
+        .status(400)
+        .json({ message: "Price per seat must be a non-negative number." });
+    }
     const startTimeDate = new Date(startTime);
+    if (isNaN(startTimeDate)) {
+      return res.status(400).json({ message: "Invalid startTime format." });
+    }
+
+    // Fetch Movie for duration to calculate endTime
+    const movieDoc = await Movie.findById(movie).select("duration");
+    if (!movieDoc) {
+      return res.status(404).json({ message: "Associated Movie not found." });
+    }
+    if (typeof movieDoc.duration !== "number" || movieDoc.duration <= 0) {
+      return res
+        .status(400)
+        .json({ message: "Associated Movie has an invalid duration." });
+    }
+
     const endTimeDate = new Date(
-      startTimeDate.getTime() + movieDoc.duration * 60000
+      startTimeDate.getTime() + movieDoc.duration * 60000 // duration in minutes
     );
+
     const newShowtime = new Showtime({
       movie,
       cinema,
@@ -650,91 +600,163 @@ router.post("/showtimes", async (req, res) => {
       startTime: startTimeDate,
       endTime: endTimeDate,
       pricePerSeat,
+      bookedSeats: [], // Initialize with empty booked seats
     });
+
     await newShowtime.save();
-    res
-      .status(201)
-      .json({ message: "Showtime created", showtime: newShowtime });
+    console.log("Admin: Showtime created:", newShowtime._id);
+    res.status(201).json({
+      message: "Showtime created successfully",
+      showtime: newShowtime,
+    });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error("Admin Showtime Create Error:", error);
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error creating showtime", error: error.message });
   }
 });
 
 // PUT /admin/showtimes/:id - Update a showtime
 router.put("/showtimes/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
+    const showtimeIdToUpdate = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(showtimeIdToUpdate)) {
+      return res.status(400).json({ message: "Invalid Showtime ID format" });
+    }
+
     const updateData = req.body;
-    // Prevent updating critical fields directly
+    // Prevent updating movie, cinema, or bookedSeats directly via this route
     delete updateData.movie;
     delete updateData.cinema;
     delete updateData.bookedSeats;
-    delete updateData._id;
-    // Recalculate endTime if startTime changes
+    delete updateData._id; // Should not be in body anyway
+
+    // Recalculate endTime if startTime changes or movie (if movie update was allowed)
     if (updateData.startTime) {
-      const showtime = await Showtime.findById(id).populate(
-        "movie",
-        "duration"
-      );
-      if (!showtime)
-        return res.status(404).json({ message: "Showtime not found" });
+      // Need the movie's duration. Fetch the showtime to get its movie ID.
+      const currentShowtime = await Showtime.findById(showtimeIdToUpdate)
+        .populate("movie", "duration") // Populate only duration
+        .lean(); // Use lean for read-only operation
+
+      if (!currentShowtime) {
+        return res.status(404).json({ message: "Showtime not found." });
+      }
+      if (
+        !currentShowtime.movie ||
+        typeof currentShowtime.movie.duration !== "number" ||
+        currentShowtime.movie.duration <= 0
+      ) {
+        return res.status(400).json({
+          message:
+            "Cannot update showtime: associated movie's duration is invalid.",
+        });
+      }
+
+      const newStartTimeDate = new Date(updateData.startTime);
+      if (isNaN(newStartTimeDate)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid new startTime format." });
+      }
       updateData.endTime = new Date(
-        new Date(updateData.startTime).getTime() +
-          showtime.movie.duration * 60000
+        newStartTimeDate.getTime() + currentShowtime.movie.duration * 60000
       );
     }
+    // Validate pricePerSeat if provided
+    if (updateData.pricePerSeat !== undefined) {
+      const priceNum = parseFloat(updateData.pricePerSeat);
+      if (isNaN(priceNum) || priceNum < 0) {
+        return res.status(400).json({ message: "Invalid price per seat." });
+      }
+      updateData.pricePerSeat = priceNum;
+    }
+
     const updatedShowtime = await Showtime.findByIdAndUpdate(
-      id,
+      showtimeIdToUpdate,
       { $set: updateData },
       { new: true, runValidators: true }
     );
-    if (!updatedShowtime)
+
+    if (!updatedShowtime) {
       return res.status(404).json({ message: "Showtime not found" });
-    res
-      .status(200)
-      .json({ message: "Showtime updated", showtime: updatedShowtime });
+    }
+    console.log(`Admin: Updated showtime ${showtimeIdToUpdate}`);
+    res.status(200).json({
+      message: "Showtime updated successfully",
+      showtime: updatedShowtime,
+    });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin Showtime Update Error (${req.params.id}):`, error);
+    if (error.name === "ValidationError") {
+      return res
+        .status(400)
+        .json({ message: "Validation Error", errors: error.errors });
+    }
+    res
+      .status(500)
+      .json({ message: "Error updating showtime", error: error.message });
   }
 });
 
 // DELETE /admin/showtimes/:id - Delete a showtime
 router.delete("/showtimes/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
-    const bookingCount = await Booking.countDocuments({ showtime: id });
-    if (bookingCount > 0)
+    const showtimeIdToDelete = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(showtimeIdToDelete)) {
+      return res.status(400).json({ message: "Invalid Showtime ID format" });
+    }
+
+    // Check for existing bookings before deleting
+    const existingBookings = await Booking.countDocuments({
+      showtime: showtimeIdToDelete,
+    });
+    if (existingBookings > 0) {
       return res.status(400).json({
-        message: `Cannot delete showtime with ${bookingCount} booking(s).`,
+        message: `Cannot delete showtime with ${existingBookings} existing booking(s). Please cancel or reassign bookings first.`,
       });
-    const deletedShowtime = await Showtime.findByIdAndDelete(id);
-    if (!deletedShowtime)
+    }
+
+    const deletedShowtime = await Showtime.findByIdAndDelete(
+      showtimeIdToDelete
+    );
+    if (!deletedShowtime) {
       return res.status(404).json({ message: "Showtime not found" });
-    res.status(200).json({ message: `Showtime deleted` });
+    }
+    console.log(`Admin: Deleted showtime ${showtimeIdToDelete}`);
+    res.status(200).json({ message: `Showtime deleted successfully` });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin Showtime Delete Error (${req.params.id}):`, error);
+    res
+      .status(500)
+      .json({ message: "Error deleting showtime", error: error.message });
   }
 });
 
 // =========================
 // == BOOKING MANAGEMENT ===
 // =========================
-// GET /admin/bookings - List all bookings with filters
+// GET /admin/bookings - List all bookings with filters and pagination
 router.get("/bookings", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { search, status, date, userId, movieId, cinemaId } = req.query;
+    const {
+      search,
+      status,
+      date,
+      userId,
+      movieId,
+      cinemaId,
+      page = 1,
+      limit = 15,
+    } = req.query;
     let filter = {};
-    let userIds = null;
-    let movieIds = null;
+
     if (search && search.trim()) {
-      /* ... Search logic ... */
       const searchTerm = search.trim();
       const searchRegex = { $regex: searchTerm, $options: "i" };
       const matchingUsers = await User.find({
@@ -742,35 +764,39 @@ router.get("/bookings", async (req, res) => {
       })
         .select("_id")
         .lean();
-      userIds = matchingUsers.map((u) => u._id);
+      const userIds = matchingUsers.map((u) => u._id);
       const matchingMovies = await Movie.find({ title: searchRegex })
         .select("_id")
         .lean();
-      movieIds = matchingMovies.map((m) => m._id);
-      const searchConditions = [];
-      searchConditions.push({ bookingId: searchRegex });
-      if (userIds && userIds.length > 0)
-        searchConditions.push({ user: { $in: userIds } });
-      if (movieIds && movieIds.length > 0)
+      const movieIds = matchingMovies.map((m) => m._id);
+
+      const searchConditions = [{ bookingId: searchRegex }];
+      if (userIds.length > 0) searchConditions.push({ user: { $in: userIds } });
+      if (movieIds.length > 0)
         searchConditions.push({ movie: { $in: movieIds } });
-      if (searchConditions.length > 0) {
-        filter.$or = searchConditions;
-      } else {
-        return res.status(200).json({ bookings: [] });
+
+      if (searchConditions.length > 0) filter.$or = searchConditions;
+      else {
+        // If search term doesn't match any user/movie name and is not a bookingId pattern
+        // To avoid returning all bookings if search doesn't find related entities but isn't specific to bookingId
+        // We can add a condition that will result in no matches if filter.$or is empty due to this.
+        // For example, match a non-existent bookingId.
+        // This part can be tricky; better to ensure search logic is robust.
+        // For now, if $or is empty because user/movie search yielded nothing, it effectively returns nothing (if bookingId pattern also fails).
       }
     }
+
     if (
       status &&
       ["pending", "paid", "failed", "refunded", "cancelled"].includes(status)
-    )
+    ) {
       filter.paymentStatus = status;
+    }
     if (date) {
       const targetDate = new Date(date);
       if (!isNaN(targetDate)) {
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
         filter.bookingDate = { $gte: startOfDay, $lte: endOfDay };
       }
     }
@@ -779,88 +805,142 @@ router.get("/bookings", async (req, res) => {
       filter.movie = movieId;
     if (cinemaId && mongoose.Types.ObjectId.isValid(cinemaId))
       filter.cinema = cinemaId;
-    // TODO: Add Pagination
-    const bookings = await Booking.find(filter)
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const bookingsPromise = Booking.find(filter)
       .populate("user", "name email")
       .populate("movie", "title")
       .populate("cinema", "name")
       .populate("showtime", "startTime screenName")
-      .sort({ bookingDate: -1 });
-    res.status(200).json({ bookings: bookings });
+      .sort({ bookingDate: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    const totalBookingsPromise = Booking.countDocuments(filter);
+
+    const [bookings, totalBookings] = await Promise.all([
+      bookingsPromise,
+      totalBookingsPromise,
+    ]);
+
+    res.status(200).json({
+      bookings: bookings,
+      total: totalBookings,
+      page: pageNum,
+      pages: Math.ceil(totalBookings / limitNum),
+    });
   } catch (error) {
     console.error("Admin Bookings Fetch Error:", error);
-    res.status(500).json({ message: "Error fetching bookings" });
+    res
+      .status(500)
+      .json({ message: "Error fetching bookings", error: error.message });
   }
 });
 
 // PUT /admin/bookings/:id - Update booking status
 router.put("/bookings/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
+    const bookingIdToUpdate = req.params.id;
     const { paymentStatus } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
+
+    if (!mongoose.Types.ObjectId.isValid(bookingIdToUpdate)) {
+      return res.status(400).json({ message: "Invalid Booking ID format" });
+    }
     if (
       !paymentStatus ||
       !["pending", "paid", "failed", "refunded", "cancelled"].includes(
         paymentStatus
       )
-    )
-      return res.status(400).json({ message: "Invalid paymentStatus" });
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid paymentStatus provided" });
+    }
+
     const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
+      bookingIdToUpdate,
       { $set: { paymentStatus: paymentStatus } },
       { new: true, runValidators: true }
-    );
-    if (!updatedBooking)
+    )
+      .populate("user", "name email") // Repopulate for consistent response
+      .populate("movie", "title")
+      .populate("cinema", "name")
+      .populate("showtime", "startTime screenName");
+
+    if (!updatedBooking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+    console.log(
+      `Admin: Updated booking ${bookingIdToUpdate} status to ${paymentStatus}`
+    );
     res
       .status(200)
       .json({ message: "Booking status updated", booking: updatedBooking });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin Booking Update Error (${req.params.id}):`, error);
+    res
+      .status(500)
+      .json({ message: "Error updating booking status", error: error.message });
   }
 });
 
 // DELETE /admin/bookings/:id - Cancel/Delete a booking (releases seats)
 router.delete("/bookings/:id", async (req, res) => {
-  /* ... Logic from previous implementation ... */
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ message: "Invalid ID" });
-    const deletedBooking = await Booking.findByIdAndDelete(id);
-    if (!deletedBooking)
+    const bookingIdToDelete = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(bookingIdToDelete)) {
+      return res.status(400).json({ message: "Invalid Booking ID format" });
+    }
+
+    const bookingToDelete = await Booking.findById(bookingIdToDelete);
+    if (!bookingToDelete) {
       return res.status(404).json({ message: "Booking not found" });
-    try {
+    }
+
+    // Release seats
+    if (bookingToDelete.showtime && bookingToDelete.seats?.length > 0) {
       await Showtime.updateOne(
-        { _id: deletedBooking.showtime },
-        { $pull: { bookedSeats: { $in: deletedBooking.seats } } }
+        { _id: bookingToDelete.showtime },
+        { $pullAll: { bookedSeats: bookingToDelete.seats } } // Use $pullAll for arrays
       );
-    } catch (e) {
-      console.error("Seat release error:", e);
+      console.log(
+        `Admin: Released seats ${bookingToDelete.seats.join(
+          ", "
+        )} for showtime ${bookingToDelete.showtime}`
+      );
     }
-    try {
+
+    // Remove booking reference from user
+    if (bookingToDelete.user) {
       await User.updateOne(
-        { _id: deletedBooking.user },
-        { $pull: { bookings: deletedBooking._id } }
+        { _id: bookingToDelete.user },
+        { $pull: { bookings: bookingToDelete._id } }
       );
-    } catch (e) {
-      console.error("User booking ref error:", e);
+      console.log(
+        `Admin: Removed booking ref ${bookingToDelete._id} from user ${bookingToDelete.user}`
+      );
     }
-    res
-      .status(200)
-      .json({ message: `Booking ID "${deletedBooking.bookingId}" deleted` });
+
+    await Booking.findByIdAndDelete(bookingIdToDelete);
+
+    console.log(`Admin: Deleted booking ${bookingToDelete.bookingId}`);
+    res.status(200).json({
+      message: `Booking ID "${bookingToDelete.bookingId}" deleted and seats released.`,
+    });
   } catch (error) {
-    /* ... Error handling ... */
+    console.error(`Admin Booking Delete Error (${req.params.id}):`, error);
+    res
+      .status(500)
+      .json({ message: "Error deleting booking", error: error.message });
   }
 });
 
 // =========================
 // == REVIEW MANAGEMENT ====
 // =========================
-// GET /admin/reviews - List all reviews with filters
+// GET /admin/reviews - List all reviews with filters and pagination
 router.get("/reviews", async (req, res) => {
   try {
     const {
@@ -871,66 +951,39 @@ router.get("/reviews", async (req, res) => {
       isHidden,
       page = 1,
       limit = 15,
-    } = req.query; // <<< Thêm page, limit
+    } = req.query;
     let filter = {};
-    let userIds = null;
-    let movieIds = null;
 
-    // --- Search Logic ---
     if (search && search.trim()) {
       const searchTerm = search.trim();
       const searchRegex = { $regex: searchTerm, $options: "i" };
-
-      // Find matching User IDs (parallel)
       const userSearchPromise = User.find({
         $or: [{ name: searchRegex }, { email: searchRegex }],
       })
         .select("_id")
         .lean();
-
-      // Find matching Movie IDs (parallel)
       const movieSearchPromise = Movie.find({ title: searchRegex })
         .select("_id")
         .lean();
-
       const [matchingUsers, matchingMovies] = await Promise.all([
         userSearchPromise,
         movieSearchPromise,
       ]);
-
-      userIds = matchingUsers.map((u) => u._id);
-      movieIds = matchingMovies.map((m) => m._id);
-
-      const searchConditions = [];
-      searchConditions.push({ comment: searchRegex }); // Search in comment text
+      const userIds = matchingUsers.map((u) => u._id);
+      const movieIds = matchingMovies.map((m) => m._id);
+      const searchConditions = [{ comment: searchRegex }];
       if (userIds.length > 0) searchConditions.push({ user: { $in: userIds } });
       if (movieIds.length > 0)
         searchConditions.push({ movie: { $in: movieIds } });
-
-      if (searchConditions.length > 0) {
-        filter.$or = searchConditions;
-      } else {
-        // If search term doesn't match any user/movie and is not a comment match pattern
-        // We assume it should return empty if nothing is found across relations
-        console.log("Search term did not match any known field or entity.");
-        return res
-          .status(200)
-          .json({ reviews: [], total: 0, page: 1, limit: limit }); // Return empty with pagination info
-      }
+      filter.$or = searchConditions;
     }
 
-    // --- Other Filters ---
     if (movieId && mongoose.Types.ObjectId.isValid(movieId))
       filter.movie = movieId;
     if (userId && mongoose.Types.ObjectId.isValid(userId)) filter.user = userId;
-    if (
-      rating &&
-      !isNaN(parseInt(rating)) &&
-      parseInt(rating) >= 1 &&
-      parseInt(rating) <= 5
-    )
-      filter.rating = parseInt(rating);
-    // Handle boolean filter correctly (query params are strings)
+    const ratingNum = parseInt(rating, 10);
+    if (!isNaN(ratingNum) && ratingNum >= 1 && ratingNum <= 5)
+      filter.rating = ratingNum;
     if (
       isHidden !== undefined &&
       ["true", "false"].includes(isHidden.toLowerCase())
@@ -938,39 +991,28 @@ router.get("/reviews", async (req, res) => {
       filter.isHidden = isHidden.toLowerCase() === "true";
     }
 
-    // --- Pagination Logic ---
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 15; // Default limit to 15
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
     const skip = (pageNum - 1) * limitNum;
 
-    console.log("Admin reviews filter:", JSON.stringify(filter));
-    console.log("Pagination:", { page: pageNum, limit: limitNum, skip });
-
-    // Execute queries in parallel: one for data, one for total count
     const reviewsPromise = Review.find(filter)
-      .populate("user", "name email") // Populate user details
-      .populate("movie", "title") // Populate movie title
-      .sort({ createdAt: -1 }) // Sort by newest first
-      .skip(skip) // Apply skip for pagination
-      .limit(limitNum); // Apply limit for pagination
-
-    const totalReviewsPromise = Review.countDocuments(filter); // Count documents matching the filter
+      .populate("user", "name email")
+      .populate("movie", "title")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+    const totalReviewsPromise = Review.countDocuments(filter);
 
     const [reviews, totalReviews] = await Promise.all([
       reviewsPromise,
       totalReviewsPromise,
     ]);
 
-    console.log(
-      `Found ${reviews.length} reviews for page ${pageNum}, total ${totalReviews}`
-    );
-
     res.status(200).json({
-      reviews: reviews, // The array of reviews for the current page
-      total: totalReviews, // Total number of reviews matching the filter
-      page: pageNum, // Current page number
-      limit: limitNum, // Number of items per page
-      pages: Math.ceil(totalReviews / limitNum), // Total number of pages
+      reviews: reviews,
+      total: totalReviews,
+      page: pageNum,
+      pages: Math.ceil(totalReviews / limitNum),
     });
   } catch (error) {
     console.error("Admin: Error fetching reviews:", error);
@@ -980,38 +1022,43 @@ router.get("/reviews", async (req, res) => {
   }
 });
 
-// PUT /admin/reviews/:id - Update review visibility (or other fields if needed)
+// PUT /admin/reviews/:id - Update review visibility
 router.put("/reviews/:id", async (req, res) => {
-  // <<< Đã thêm endpoint này
   try {
     const reviewId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(reviewId))
-      return res.status(400).json({ message: "Invalid Review ID" });
+    const { isHidden } = req.body;
 
-    const { isHidden } = req.body; // Example: only update isHidden
+    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+      return res.status(400).json({ message: "Invalid Review ID format" });
+    }
     if (isHidden === undefined || typeof isHidden !== "boolean") {
-      return res
-        .status(400)
-        .json({ message: "Missing or invalid 'isHidden' field." });
+      return res.status(400).json({
+        message: "'isHidden' field is required and must be a boolean.",
+      });
     }
 
     const updatedReview = await Review.findByIdAndUpdate(
       reviewId,
-      { $set: { isHidden: isHidden } },
-      { new: true, runValidators: true }
-    )
-      .populate("user", "name")
-      .populate("movie", "title");
+      { $set: { isHidden } },
+      { new: true }
+    ).populate("movie", "_id"); // Populate movie ID to update its rating
 
-    if (!updatedReview)
+    if (!updatedReview) {
       return res.status(404).json({ message: "Review not found" });
+    }
 
-    // Recalculate movie rating if review visibility changes? Optional, depends on logic.
-    // await updatedReview.constructor.updateMovieRating(updatedReview.movie._id); // Call static method if needed
+    // CRITICAL: Update the movie's average rating after changing review visibility
+    if (updatedReview.movie?._id) {
+      await Review.updateMovieAverageRating(updatedReview.movie._id); // Call static method from Review model
+    } else {
+      console.warn(
+        `Review ${updatedReview._id} updated, but associated movie data missing for rating update.`
+      );
+    }
 
     console.log(`Admin: Updated review ${reviewId} visibility to ${isHidden}`);
     res.status(200).json({
-      message: `Review ${isHidden ? "hidden" : "shown"}`,
+      message: `Review visibility ${isHidden ? "hidden" : "shown"}`,
       review: updatedReview,
     });
   } catch (error) {
@@ -1026,17 +1073,18 @@ router.put("/reviews/:id", async (req, res) => {
 router.delete("/reviews/:id", async (req, res) => {
   try {
     const reviewId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(reviewId))
-      return res.status(400).json({ message: "Invalid Review ID" });
+    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+      return res.status(400).json({ message: "Invalid Review ID format" });
+    }
 
-    // Dùng findOneAndDelete để trigger hook 'post findOneAndDelete' trong model Review
-    // Hook này sẽ tự động cập nhật lại rating trung bình của phim liên quan
+    // Use findOneAndDelete to trigger the 'post findOneAndDelete' hook in Review model
     const deletedReview = await Review.findOneAndDelete({ _id: reviewId });
 
     if (!deletedReview) {
       return res.status(404).json({ message: "Review not found" });
     }
 
+    // The hook in Review model will handle movie average rating update.
     console.log(
       `Admin: Deleted review ${reviewId} for movie ${deletedReview.movie}`
     );
@@ -1050,5 +1098,3 @@ router.delete("/reviews/:id", async (req, res) => {
 });
 
 module.exports = router;
-
-// --- END OF FILE api/routes/admin.js ---

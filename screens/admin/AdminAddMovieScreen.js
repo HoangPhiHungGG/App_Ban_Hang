@@ -11,12 +11,12 @@ import {
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
-  Button,
+  // Button, // Không cần thiết nếu dùng Pressable cho date picker Android
 } from "react-native";
 import {
   useNavigation,
   useRoute,
-  useFocusEffect,
+  // useFocusEffect, // Không cần thiết trong file này nếu chỉ fetch 1 lần khi edit
 } from "@react-navigation/native";
 import api from "../../api"; // Your API instance
 import DropDownPicker from "react-native-dropdown-picker";
@@ -26,32 +26,33 @@ import { Ionicons } from "@expo/vector-icons";
 const AdminAddMovieScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const movieId = route.params?.movieId; // Lấy movieId nếu được truyền qua (chế độ Edit)
-  const isEditing = !!movieId; // Xác định chế độ: true nếu có movieId (Edit), false nếu không (Add)
+  const movieId = route.params?.movieId;
+  const isEditing = !!movieId;
 
-  const [loading, setLoading] = useState(false); // Loading cho nút Submit
-  const [fetchingData, setFetchingData] = useState(isEditing); // Loading khi fetch dữ liệu ban đầu (chỉ khi Edit)
-  const [error, setError] = useState(null); // Lỗi khi fetch dữ liệu
+  const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(isEditing);
+  const [error, setError] = useState(null);
 
-  // --- Form State (Khởi tạo rỗng) ---
+  // --- Form State ---
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [posterImage, setPosterImage] = useState("");
   const [bannerImage, setBannerImage] = useState("");
   const [trailerUrl, setTrailerUrl] = useState("");
-  const [genreInput, setGenreInput] = useState("");
-  const [language, setLanguage] = useState(null);
-  const [duration, setDuration] = useState("");
+  const [genreInput, setGenreInput] = useState(""); // Sẽ là string "Action, Comedy"
+  const [language, setLanguage] = useState(null); // Value cho DropDownPicker
+  const [duration, setDuration] = useState(""); // String từ TextInput
   const [releaseDate, setReleaseDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [status, setStatus] = useState(isEditing ? "" : "coming_soon"); // Mặc định là coming_soon khi Add
-  const [castInput, setCastInput] = useState("");
+  const [status, setStatus] = useState(isEditing ? null : "coming_soon"); // Giá trị cho DropDownPicker
+  const [castInput, setCastInput] = useState(""); // Sẽ là string "Actor1, Actor2"
   const [director, setDirector] = useState("");
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState(""); // Thêm state cho country
 
-  // --- Dropdown State & Data --- (Giữ nguyên)
+  // --- Dropdown State & Data ---
   const [languageOpen, setLanguageOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+
   const [languageItems, setLanguageItems] = useState([
     { label: "English", value: "English" },
     { label: "Vietnamese", value: "Vietnamese" },
@@ -67,101 +68,109 @@ const AdminAddMovieScreen = () => {
     { label: "Ended", value: "ended" },
   ]);
 
-  // --- Fetch dữ liệu phim hiện có nếu là chế độ Edit ---
+  // --- Fetch Movie Data for Editing ---
   const fetchMovieData = useCallback(async () => {
-    if (!isEditing) {
-      // Chỉ fetch nếu đang edit
-      setFetchingData(false); // Không cần fetch nếu là Add
+    if (!isEditing || !movieId) {
+      setFetchingData(false);
       return;
     }
-    console.log(`Fetching data for movie ID: ${movieId}`);
+    console.log(`AdminAddMovieScreen: Fetching data for movie ID: ${movieId}`);
     setFetchingData(true);
     setError(null);
     try {
       const response = await api.get(`/movies/${movieId}`);
       const movie = response.data;
       if (movie) {
-        // Điền dữ liệu vào form state
         setTitle(movie.title || "");
         setDescription(movie.description || "");
         setPosterImage(movie.posterImage || "");
         setBannerImage(movie.bannerImage || "");
         setTrailerUrl(movie.trailerUrl || "");
-        setGenreInput(Array.isArray(movie.genre) ? movie.genre.join(", ") : ""); // Join array thành string
+        setGenreInput(Array.isArray(movie.genre) ? movie.genre.join(", ") : "");
         setLanguage(movie.language || null);
         setDuration(movie.duration?.toString() || "");
         setReleaseDate(
           movie.releaseDate ? new Date(movie.releaseDate) : new Date()
-        ); // Chuyển ISO string thành Date
-        setStatus(movie.status || "coming_soon"); // Đặt status lấy được
-        setCastInput(Array.isArray(movie.cast) ? movie.cast.join(", ") : ""); // Join array thành string
+        );
+        setStatus(movie.status || null); // Quan trọng: Nếu status từ API là null/undefined, để DropDown hiển thị placeholder
+        setCastInput(Array.isArray(movie.cast) ? movie.cast.join(", ") : "");
         setDirector(movie.director || "");
-        // setCountry(movie.country || ''); // Nếu có trường country
+        setCountry(movie.country || ""); // Thêm country
       } else {
         throw new Error("Movie data not found.");
       }
     } catch (err) {
       console.error(
-        "Error fetching movie data:",
+        "AdminAddMovieScreen: Error fetching movie data:",
         err.response?.data || err.message
       );
       setError("Could not load movie data for editing.");
-      Alert.alert("Error", "Could not load movie data. Please try again.");
+      Alert.alert(
+        "Error Loading Data",
+        "Could not load movie data. Please try again."
+      );
     } finally {
       setFetchingData(false);
     }
-  }, [isEditing, movieId]); // Phụ thuộc isEditing và movieId
+  }, [isEditing, movieId]);
 
-  // Chạy fetch khi component mount hoặc movieId thay đổi (chỉ khi isEditing)
   useEffect(() => {
     if (isEditing) {
       fetchMovieData();
     }
-    // Đặt tiêu đề động ban đầu
+    // Đặt tiêu đề động ban đầu, sẽ được cập nhật sau khi fetch xong nếu là edit
     navigation.setOptions({
-      title: isEditing ? "Edit Movie" : "Add New Movie",
+      title: isEditing ? "Loading Movie..." : "Add New Movie",
     });
-  }, [fetchMovieData, navigation, isEditing]); // Chỉ fetchMovieData là dependency chính
+  }, [isEditing, movieId, navigation, fetchMovieData]); // <<< THÊM fetchMovieData vào dependencies
 
-  // Cập nhật tiêu đề header khi 'title' state thay đổi (chỉ khi đang edit)
+  // Hook riêng để cập nhật tiêu đề sau khi `title` (từ fetch) hoặc `isEditing` thay đổi
   useEffect(() => {
     if (isEditing) {
-      navigation.setOptions({ title: `Edit: ${title || "Movie"}` });
+      if (!fetchingData) {
+        // Chỉ cập nhật title khi đã fetch xong
+        navigation.setOptions({ title: `Edit: ${title || "Movie"}` });
+      }
+    } else {
+      navigation.setOptions({ title: "Add New Movie" });
     }
-  }, [isEditing, navigation]); // Phụ thuộc title
+  }, [isEditing, title, fetchingData, navigation]);
 
-  // --- Handlers --- (Giữ nguyên DatePicker và Dropdown handlers)
-
+  // --- Handlers ---
   const onLanguageOpen = useCallback(() => setStatusOpen(false), []);
   const onStatusOpen = useCallback(() => setLanguageOpen(false), []);
-  const onDateChange = (event, selectedDate) => {
-    if (Platform.OS === "android") setShowDatePicker(false);
-    if (event.type === "set" && selectedDate) {
-      setReleaseDate(selectedDate);
+
+  const onDateChange = (event, selectedDateFromPicker) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false); // Luôn ẩn picker Android sau khi chọn/hủy
+    }
+    if (event.type === "set" && selectedDateFromPicker) {
+      // Chỉ cập nhật nếu người dùng chọn "set"
+      setReleaseDate(selectedDateFromPicker);
     }
   };
   const showDatepicker = () => setShowDatePicker(true);
 
-  // --- Form Submission (Xử lý cả Add và Edit) ---
+  // --- Form Submission ---
   const handleSubmit = async () => {
-    // ** 1. Validation ** (Giữ nguyên)
     if (
       !title.trim() ||
       !description.trim() ||
       !posterImage.trim() ||
       !genreInput.trim() ||
-      !language ||
+      !language || // Kiểm tra language đã được chọn
       !duration.trim() ||
-      !status
+      !status // Kiểm tra status đã được chọn
     ) {
       Alert.alert(
         "Missing Information",
-        "Please fill in all required fields marked with *. "
+        "Please fill in all required fields marked with *."
       );
       return;
     }
-    const durationNum = parseInt(duration, 10);
-    if (isNaN(durationNum) || durationNum <= 0) {
+
+    const durationNumber = parseInt(duration, 10);
+    if (isNaN(durationNumber) || durationNumber <= 0) {
       Alert.alert(
         "Invalid Duration",
         "Please enter a valid positive number for duration."
@@ -170,73 +179,85 @@ const AdminAddMovieScreen = () => {
     }
 
     setLoading(true);
+    setError(null);
 
-    // ** 2. Prepare Data ** (Giữ nguyên)
-    const genres = genreInput
+    const genresArray = genreInput
       .split(",")
       .map((g) => g.trim())
       .filter((g) => g);
-    const cast = castInput
+    const castArray = castInput
       .split(",")
       .map((c) => c.trim())
       .filter((c) => c);
 
-    const movieData = {
+    const movieDataPayload = {
       title: title.trim(),
       description: description.trim(),
       posterImage: posterImage.trim(),
       bannerImage: bannerImage.trim() || undefined,
       trailerUrl: trailerUrl.trim() || undefined,
-      genre: genres,
+      genre: genresArray,
       language: language,
-      duration: durationNum,
+      duration: durationNumber,
       releaseDate: releaseDate.toISOString(),
       status: status,
-      cast: cast,
+      cast: castArray,
       director: director.trim() || undefined,
-      // country: country.trim() || undefined,
+      country: country.trim() || undefined,
     };
 
-    // ** 3. API Call (Conditional POST or PUT) **
+    console.log(
+      "Frontend: Submitting movie data:",
+      JSON.stringify(movieDataPayload, null, 2)
+    );
+
     try {
       let response;
       if (isEditing) {
-        // Gọi API Update
-        console.log(`Updating movie ${movieId} with data:`, movieData);
-        response = await api.put(`/admin/movies/${movieId}`, movieData);
+        // SỬA Ở ĐÂY: sử dụng movieDataPayload
+        response = await api.put(`/admin/movies/${movieId}`, movieDataPayload);
       } else {
-        // Gọi API Add
-        console.log("Submitting new movie data:", movieData);
-        response = await api.post("/admin/movies", movieData);
+        response = await api.post("/admin/movies", movieDataPayload);
       }
 
-      // Xử lý kết quả
       if (response.status === 200 || response.status === 201) {
         Alert.alert(
           "Success",
           `Movie ${isEditing ? "updated" : "added"} successfully!`
         );
-        navigation.goBack(); // Quay lại màn hình quản lý
+        navigation.goBack();
       } else {
-        throw new Error(
-          response.data?.message || `Unexpected status code: ${response.status}`
+        const errorMessage =
+          response.data?.message ||
+          `Unexpected status code: ${response.status}`;
+        console.error(`API Error (Status ${response.status}):`, errorMessage);
+        setError(errorMessage);
+        Alert.alert(
+          `Error ${isEditing ? "Updating" : "Adding"} Movie`,
+          errorMessage
         );
       }
     } catch (error) {
       console.error(
-        `Error ${isEditing ? "updating" : "adding"} movie:`,
-        error.response?.data || error.message
+        `Caught Error ${isEditing ? "updating" : "adding"} movie:`,
+        error.response?.data || error.message || error
       );
+      const errorMessage =
+        error.response?.data?.message ||
+        (error.isAxiosError
+          ? "Network error or server issue."
+          : "An unknown error occurred.");
+      setError(errorMessage);
       Alert.alert(
         `Error ${isEditing ? "Updating" : "Adding"} Movie`,
-        error.response?.data?.message || "An unknown error occurred."
+        errorMessage
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Input Component Helper --- (Giữ nguyên)
+  // --- Input Component Helper ---
   const FormInput = ({
     label,
     value,
@@ -267,26 +288,25 @@ const AdminAddMovieScreen = () => {
     </View>
   );
 
-  // --- Render Loading State ---
   if (fetchingData) {
-    // Hiển thị loading khi đang fetch dữ liệu (chỉ khi edit)
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#008E97" />
       </View>
     );
   }
-  // --- Render Error State ---
-  if (error) {
-    // Hiển thị lỗi nếu fetch dữ liệu thất bại
+  if (error && isEditing) {
+    // Chỉ hiển thị lỗi này nếu đang edit và fetch lỗi
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
+        <Pressable onPress={fetchMovieData} style={styles.retryButton}>
+          <Text style={styles.retryButtonText}>Retry Fetching Data</Text>
+        </Pressable>
       </View>
     );
   }
 
-  // --- Render Form ---
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -296,12 +316,8 @@ const AdminAddMovieScreen = () => {
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="handled" // Giúp các input trong ScrollView dễ focus hơn
         >
-          {/* Tiêu đề không cần thiết vì đã có header */}
-          {/* <Text style={styles.title}>{isEditing ? 'Edit Movie' : 'Add New Movie'}</Text> */}
-
-          {/* Form Fields */}
           <FormInput
             label="Title"
             value={title}
@@ -362,7 +378,7 @@ const AdminAddMovieScreen = () => {
             onChangeText={setDirector}
             placeholder="(Optional) Director's Name"
           />
-          <FormInput
+          <FormInput // Thêm input cho Country
             label="Country"
             value={country}
             onChangeText={setCountry}
@@ -377,13 +393,12 @@ const AdminAddMovieScreen = () => {
             keyboardType="numeric"
           />
 
-          {/* Language Dropdown */}
           <View style={[styles.inputGroup, { zIndex: 3000 }]}>
             <Text style={styles.label}>
               Language <Text style={styles.required}>*</Text>
             </Text>
             <DropDownPicker
-              listMode="MODAL"
+              listMode="MODAL" // Sử dụng modal để tránh bị che khuất
               open={languageOpen}
               value={language}
               items={languageItems}
@@ -396,11 +411,10 @@ const AdminAddMovieScreen = () => {
               placeholderStyle={styles.placeholderStyles}
               modalTitle="Select Language"
               zIndex={3000}
-              onOpen={onLanguageOpen}
+              onOpen={onLanguageOpen} // Để đóng dropdown khác nếu có
             />
           </View>
 
-          {/* Status Dropdown */}
           <View style={[styles.inputGroup, { zIndex: 2000 }]}>
             <Text style={styles.label}>
               Status <Text style={styles.required}>*</Text>
@@ -423,33 +437,32 @@ const AdminAddMovieScreen = () => {
             />
           </View>
 
-          {/* Release Date Picker */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
               Release Date <Text style={styles.required}>*</Text>
             </Text>
-            {Platform.OS === "ios" && (
+            {Platform.OS === "ios" ? ( // Picker inline cho iOS
               <DateTimePicker
                 value={releaseDate}
                 mode="date"
-                display="spinner"
+                display="spinner" // hoặc "compact", "inline"
                 onChange={onDateChange}
-                style={styles.datePickerIOS}
+                style={styles.datePickerIOS} // Style riêng nếu cần
               />
-            )}
-            {Platform.OS === "android" && (
+            ) : (
+              // Nút bấm cho Android
               <Pressable
                 onPress={showDatepicker}
                 style={styles.dateDisplayAndroid}
               >
                 <Text style={styles.dateText}>
-                  {releaseDate.toLocaleDateString()}
+                  {releaseDate.toLocaleDateString("en-GB")}
                 </Text>
                 <Ionicons name="calendar-outline" size={24} color="#555" />
               </Pressable>
             )}
             {showDatePicker && Platform.OS === "android" && (
-              <DateTimePicker
+              <DateTimePicker // Modal picker cho Android
                 value={releaseDate}
                 mode="date"
                 display="default"
@@ -458,19 +471,17 @@ const AdminAddMovieScreen = () => {
             )}
           </View>
 
-          {/* Submit Button */}
           <Pressable
             style={[
               styles.submitButton,
               loading && styles.submitButtonDisabled,
             ]}
-            onPress={handleSubmit} // Gọi hàm submit chung
+            onPress={handleSubmit}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              // Đặt text động cho nút
               <Text style={styles.submitButtonText}>
                 {isEditing ? "Update Movie" : "Add Movie"}
               </Text>
@@ -482,21 +493,29 @@ const AdminAddMovieScreen = () => {
   );
 };
 
-export default AdminAddMovieScreen;
-
-// --- Styles --- (Copy từ file cũ hoặc file AdminAddEditCinemaScreen)
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "white" },
   container: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 60 },
+  scrollContent: { padding: 20, paddingBottom: 60 }, // Tăng padding bottom
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  errorText: { fontSize: 16, color: "red", textAlign: "center" },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 25,
+  errorText: {
+    fontSize: 16,
+    color: "red",
     textAlign: "center",
-    color: "#343a40",
+    marginBottom: 15,
+  },
+  retryButton: {
+    // Style cho nút Retry
+    backgroundColor: "#007bff",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  retryButtonText: {
+    // Style cho text của nút Retry
+    color: "white",
+    fontSize: 16,
   },
   inputGroup: { marginBottom: 22 },
   label: { fontSize: 15, fontWeight: "600", marginBottom: 8, color: "#495057" },
@@ -513,12 +532,14 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   textArea: { height: 120, textAlignVertical: "top" },
-  dropdownContainer: {},
+  dropdownContainer: {
+    // Không cần style đặc biệt nếu dùng modal
+  },
   dropdown: {
     borderColor: "#dee2e6",
     backgroundColor: "#f8f9fa",
     borderRadius: 8,
-    minHeight: 50,
+    minHeight: 50, // Đảm bảo chiều cao tối thiểu
   },
   placeholderStyles: { color: "#aaa", fontSize: 16 },
   dateDisplayAndroid: {
@@ -533,10 +554,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     minHeight: 50,
   },
-  datePickerIOS: { height: 150 },
+  datePickerIOS: {
+    // height: 150, // Điều chỉnh nếu cần
+    alignSelf: "stretch", // Để chiếm toàn bộ chiều rộng
+    // backgroundColor: '#f8f9fa', // Có thể thêm nền nếu muốn
+  },
   dateText: { fontSize: 16, color: "#333" },
   submitButton: {
-    backgroundColor: "#007bff",
+    backgroundColor: "#007bff", // Blue
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -547,7 +572,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,
-  }, // Blue cho submit
+  },
   submitButtonDisabled: { backgroundColor: "#6c757d", opacity: 0.7 },
   submitButtonText: { color: "white", fontSize: 17, fontWeight: "bold" },
 });
+
+export default AdminAddMovieScreen;

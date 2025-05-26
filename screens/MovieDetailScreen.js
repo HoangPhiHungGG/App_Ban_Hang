@@ -229,6 +229,48 @@ const MovieDetailScreen = () => {
       </View>
     );
   }
+  const handleDeleteMyReview = async () => {
+    if (!userId || !movie) {
+      Alert.alert("Error", "Cannot delete review at this time.");
+      return;
+    }
+
+    Alert.alert(
+      "Delete Your Review",
+      "Are you sure you want to delete your review for this movie?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setIsSubmittingReview(true); // Có thể dùng chung state loading
+            try {
+              // Gọi API user xóa review
+              await api.delete(`/movies/${movieId}/reviews`); // Endpoint mới
+              Alert.alert("Success", "Your review has been deleted.");
+              // Reset form và fetch lại
+              setUserRating(0);
+              setUserComment("");
+              setUserHasReviewed(false);
+              fetchMovieDetails(); // Tải lại chi tiết phim và reviews
+            } catch (err) {
+              console.error(
+                "Error deleting review:",
+                err.response?.data || err.message
+              );
+              Alert.alert(
+                "Error",
+                err.response?.data?.message || "Failed to delete review."
+              );
+            } finally {
+              setIsSubmittingReview(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // --- Main Render ---
   return (
@@ -260,6 +302,12 @@ const MovieDetailScreen = () => {
               <AntDesign name="star" size={18} color="#FFC72C" />
               <Text style={styles.ratingAvgText}>
                 {movie.rating?.toFixed(1) || "N/A"} / 5
+                {movie.numReviews > 0 && (
+                  <Text style={styles.numReviewsText}>
+                    {" "}
+                    ({movie.numReviews} reviews)
+                  </Text>
+                )}
               </Text>
             </View>
           </View>
@@ -386,9 +434,28 @@ const MovieDetailScreen = () => {
                     : "Submit Review"}
                 </Text>
               </Pressable>
+              {userHasReviewed && !isSubmittingReview && (
+                <Pressable
+                  style={[styles.submitButton, styles.deleteReviewButton]}
+                  onPress={handleDeleteMyReview}
+                >
+                  <Text
+                    style={[
+                      styles.submitButtonText,
+                      styles.deleteReviewButtonText,
+                    ]}
+                  >
+                    Delete My Review
+                  </Text>
+                </Pressable>
+              )}
+              {/* Nút Delete My Review (chỉ hiển thị nếu đã review) */}
             </View>
           )}
 
+          {/*  */}
+
+          {/*  */}
           {/* List of Reviews */}
           {reviews.length > 0 ? (
             reviews.map((review) => (
@@ -419,6 +486,26 @@ export default MovieDetailScreen;
 
 // --- Styles ---
 const styles = StyleSheet.create({
+  ratingAvgText: {
+    fontSize: 16,
+    marginLeft: 5,
+    fontWeight: "600",
+    color: "#555",
+  },
+  numReviewsText: {
+    // Style cho số lượt đánh giá
+    fontSize: 13,
+    color: "grey",
+    fontWeight: "normal", // Không cần đậm
+    marginLeft: 3,
+  },
+  deleteReviewButton: {
+    backgroundColor: "#dc3545", // Màu đỏ cho nút delete
+    marginTop: 10, // Khoảng cách với nút submit/update
+  },
+  deleteReviewButtonText: {
+    color: "white", // Chữ trắng cho dễ đọc
+  },
   safeArea: { flex: 1, backgroundColor: "white" },
   container: { flex: 1 },
   centered: {

@@ -1,5 +1,6 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native"; // <<< THÊM DÒNG NÀY
 
 // Read the API URL from environment variables (prefixed with EXPO_PUBLIC_)
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -16,7 +17,7 @@ console.log("API Base URL:", API_BASE_URL); // Log the URL being used
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // Add a timeout (10 seconds)
+  timeout: 100000, // Add a timeout (10 seconds)
 });
 
 // Request interceptor to add the JWT token to Authorization header

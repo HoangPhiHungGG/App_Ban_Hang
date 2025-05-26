@@ -1,113 +1,103 @@
-// --- START OF FILE api/routes/reviews.js ---
-
 const express = require("express");
-// mergeParams: true cho phép truy cập req.params từ router cha (ví dụ: req.params.movieId)
-const router = express.Router({ mergeParams: true });
+const router = express.Router({ mergeParams: true }); // mergeParams để lấy movieId từ route cha
 const mongoose = require("mongoose");
-const Review = require("../models/review"); // Import model Review
-const Movie = require("../models/movie"); // Import model Movie để kiểm tra phim tồn tại
-const { authenticateToken } = require("../middleware/auth"); // Chỉ cần authenticate cho user thường
+const Review = require("../models/review");
+const Movie = require("../models/movie"); // Để kiểm tra phim tồn tại
+const { authenticateToken } = require("../middleware/auth"); // Chỉ cần authenticate cho user
 
 // --- POST /movies/:movieId/reviews ---
-// Tạo mới hoặc cập nhật đánh giá của người dùng đã đăng nhập cho một phim cụ thể
+// User tạo mới hoặc cập nhật đánh giá của họ cho một phim
 router.post("/", authenticateToken, async (req, res) => {
   try {
-    const { rating, comment } = req.body; // Lấy rating và comment từ request body
-    const userId = req.user.userId; // Lấy userId từ token đã xác thực
-    const movieId = req.params.movieId; // Lấy movieId từ URL params (nhờ mergeParams)
+    const { rating, comment } = req.body;
+    const userId = req.user.userId; // Từ token
+    const movieId = req.params.movieId; // Từ URL
 
-    // --- Validation ---
-    // Kiểm tra movieId hợp lệ
+    // Validation
     if (!mongoose.Types.ObjectId.isValid(movieId)) {
       return res.status(400).json({ message: "Invalid Movie ID format." });
     }
-    // Kiểm tra rating hợp lệ (số từ 1 đến 5)
     if (!rating || typeof rating !== "number" || rating < 1 || rating > 5) {
       return res
         .status(400)
         .json({ message: "Rating must be a number between 1 and 5." });
     }
-    // Kiểm tra phim tồn tại (không bắt buộc nhưng nên có)
     const movieExists = await Movie.findById(movieId).select("_id");
     if (!movieExists) {
       return res.status(404).json({ message: "Movie not found." });
     }
-    // -----------------
 
-    // Tìm và cập nhật (hoặc tạo mới nếu chưa có) đánh giá của user này cho phim này
-    // findOneAndUpdate với upsert:true là cách hiệu quả để xử lý cả hai trường hợp
-    const updatedReview = await Review.findOneAndUpdate(
-      { user: userId, movie: movieId }, // Điều kiện tìm kiếm: user và movie phải khớp
+    // Tìm và cập nhật, hoặc tạo mới nếu chưa có
+    const review = await Review.findOneAndUpdate(
+      { user: userId, movie: movieId }, // Điều kiện tìm kiếm
       {
         $set: {
-          // Chỉ cập nhật các trường này
+          // Các trường cần cập nhật/đặt
           rating: rating,
-          comment: comment?.trim() || "", // Cập nhật comment, xóa khoảng trắng thừa, hoặc để rỗng
-          user: userId, // Đảm bảo user ID đúng
-          movie: movieId, // Đảm bảo movie ID đúng
+          comment: comment?.trim() || "", // Xóa khoảng trắng thừa
+          user: userId,
+          movie: movieId,
         },
       },
       {
-        new: true, // Trả về document đã được cập nhật
-        upsert: true, // Tạo mới document nếu không tìm thấy khớp
-        runValidators: true, // Chạy các validation đã định nghĩa trong Schema
+        new: true, // Trả về document đã cập nhật (hoặc mới)
+        upsert: true, // Tạo mới nếu không tìm thấy
+        runValidators: true, // Chạy schema validation
         setDefaultsOnInsert: true, // Đặt giá trị default (như createdAt) khi tạo mới
       }
-    ).populate("user", "name"); // Populate tên user để trả về cho client
+    ).populate("user", "name"); // Populate tên người dùng cho response
 
-    // Kiểm tra xem review được tạo mới hay cập nhật
-    // Mongoose không cung cấp trực tiếp cờ isNew cho findOneAndUpdate,
-    // nhưng bạn có thể so sánh createdAt và updatedAt hoặc dựa vào trạng thái HTTP
-    const isNew =
-      updatedReview.createdAt.getTime() === updatedReview.updatedAt.getTime(); // Cách ước lượng
-    const statusCode = isNew ? 201 : 200; // 201 Created hoặc 200 OK
+    if (!review) {
+      // Trường hợp hiếm, upsert không thành công
+      return res
+        .status(500)
+        .json({ message: "Failed to save or update review." });
+    }
+
+    // Xác định là tạo mới hay cập nhật dựa trên version key (__v)
+    const isNewDocument = review.__v === 0; // Mongoose tự tăng __v khi update
+    const statusCode = isNewDocument ? 201 : 200; // 201 Created, 200 OK
 
     console.log(
       `Review ${
-        isNew ? "created" : "updated"
+        isNewDocument ? "created" : "updated"
       } by ${userId} for movie ${movieId}`
     );
-
-    // Không cần gọi updateMovieRating ở đây nữa vì hook post save/remove trong model sẽ tự làm
+    // Hook 'post save' trong Review model sẽ tự động cập nhật rating trung bình của Movie
 
     res.status(statusCode).json({
-      message: `Review successfully ${isNew ? "added" : "updated"}.`,
-      review: updatedReview,
+      message: `Review successfully ${isNewDocument ? "added" : "updated"}.`,
+      review: review,
     });
   } catch (error) {
-    console.error("Error adding/updating review:", error);
-    // Xử lý lỗi trùng lặp nếu có (mặc dù findOneAndUpdate + upsert thường xử lý tốt)
+    console.error("Error processing review submission:", error);
     if (error.code === 11000) {
-      return res
-        .status(409)
-        .json({ message: "Review conflict. Please try again." });
+      // Lỗi unique key (user đã review phim này rồi - trường hợp hiếm với findOneAndUpdate)
+      return res.status(409).json({
+        message: "Review conflict. You might have already reviewed this movie.",
+      });
     }
-    res.status(500).json({
-      message: "Failed to add or update review.",
-      error: error.message,
-    });
+    res
+      .status(500)
+      .json({ message: "Failed to process review.", error: error.message });
   }
 });
 
 // --- GET /movies/:movieId/reviews ---
-// Lấy tất cả các đánh giá (đã được phê duyệt/không ẩn) cho một phim cụ thể (Public)
+// Lấy tất cả các đánh giá (không bị ẩn) cho một phim cụ thể (Public)
 router.get("/", async (req, res) => {
   try {
-    const movieId = req.params.movieId; // Lấy movieId từ URL params
-
-    // Kiểm tra movieId hợp lệ
+    const movieId = req.params.movieId;
     if (!mongoose.Types.ObjectId.isValid(movieId)) {
       return res.status(400).json({ message: "Invalid Movie ID format." });
     }
 
-    // Tìm tất cả review cho movieId này
-    // Thêm điều kiện lọc { isHidden: { $ne: true } } nếu bạn muốn ẩn các review bị admin đánh dấu
     const reviews = await Review.find({
       movie: movieId,
-      // isHidden: { $ne: true } // Bỏ comment dòng này nếu có trường isHidden và muốn lọc
+      isHidden: { $ne: true }, // Chỉ lấy các review không bị đánh dấu là ẩn
     })
       .populate("user", "name") // Chỉ lấy tên của người dùng
-      .sort({ createdAt: -1 }); // Sắp xếp theo ngày tạo mới nhất trước
+      .sort({ createdAt: -1 }); // Sắp xếp mới nhất trước
 
     res.status(200).json(reviews); // Trả về mảng các reviews
   } catch (error) {
@@ -120,5 +110,47 @@ router.get("/", async (req, res) => {
       .json({ message: "Failed to fetch reviews.", error: error.message });
   }
 });
+
+// --- DELETE /movies/:movieId/reviews ---
+// Cho phép người dùng đã đăng nhập xóa review của chính họ cho phim này
+router.delete("/", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId; // Lấy userId từ token
+    const movieId = req.params.movieId; // Lấy movieId từ URL
+
+    if (!mongoose.Types.ObjectId.isValid(movieId)) {
+      return res.status(400).json({ message: "Invalid Movie ID." });
+    }
+
+    // Tìm và xóa review của user này cho phim này
+    // findOneAndDelete sẽ trigger hook 'post findOneAndDelete'
+    const deletedReview = await Review.findOneAndDelete({
+      user: userId,
+      movie: movieId,
+    });
+
+    if (!deletedReview) {
+      // Có thể user chưa review, hoặc review đã bị xóa
+      return res.status(404).json({
+        message: "Review not found or you are not authorized to delete it.",
+      });
+    }
+
+    // Hook 'post findOneAndDelete' trong Review model sẽ tự động cập nhật rating trung bình của Movie
+
+    console.log(`User ${userId} deleted their review for movie ${movieId}`);
+    res
+      .status(200)
+      .json({ message: "Your review has been deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting user review:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to delete your review.", error: error.message });
+  }
+});
+
+// Các route admin cho review (ví dụ: PUT /admin/reviews/:id để ẩn/hiện)
+// sẽ nằm trong file api/routes/admin.js và được mount với prefix /admin/reviews/:id
 
 module.exports = router;
