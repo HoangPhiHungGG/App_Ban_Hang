@@ -156,7 +156,7 @@ JWT_SECRET_KEY=your_secret
 4. **Run the Application**
 - Frontend:
 ```sh
-npm start
+expo start
 ```
 - Backend:
 ```sh
