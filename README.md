@@ -1,89 +1,184 @@
 # 🎬 ỨNG DỤNG BÁN VÉ XEM PHIM ĐA NỀN TẢNG
 
 ## 🎯 Giới thiệu
+Ứng dụng di động đa nền tảng cho phép người dùng dễ dàng đặt vé xem phim, với giao diện thân thiện và đầy đủ tính năng.
+## ⭐ Tính Năng Chính
 
-Ứng dụng bán vé xem phim giúp người dùng:
-- Đăng ký / Đăng nhập tài khoản
-- Xem danh sách **phim đang chiếu** và **sắp chiếu**
-- Xem **thông tin chi tiết**, **trailer**, và **giá vé**
-- Chọn lịch chiếu và **đặt vé nhanh chóng**
-- Thanh toán với nhiều hình thức tiện lợi
+### 👤 Quản Lý Tài Khoản
+- **Đăng Ký & Đăng Nhập**
+  - Đăng ký tài khoản mới
+  - Đăng nhập bằng email/mật khẩu
+  - Xác thực qua email
+  - Khôi phục mật khẩu
 
-### 👨‍💼 Quản trị viên (Admin) có thể:
-- Thêm / xoá / lọc **phim**
-- Thêm / xoá / lọc **lịch chiếu**
-- Thêm / xoá / chỉnh sửa **phòng chiếu**
+- **Hồ Sơ Người Dùng**
+  - Xem/Chỉnh sửa thông tin cá nhân
+  - Đổi mật khẩu
+  - Xem lịch sử đặt vé
+  - Quản lý phương thức thanh toán
 
+### 🎬 Phim & Suất Chiếu
+- **Danh Sách Phim**
+  - Phim đang chiếu
+  - Phim sắp chiếu
+  - Tìm kiếm theo tên
+  - Lọc theo thể loại/ngôn ngữ
+
+- **Chi Tiết Phim**
+  - Thông tin chi tiết & trailer
+  - Đánh giá & bình luận
+  - Lịch chiếu theo ngày
+  - Đặt vé nhanh
+
+### 🎫 Đặt Vé & Thanh Toán
+- **Chọn Suất Chiếu**
+  - Xem lịch theo ngày
+  - Lọc theo rạp
+  - Thông tin giá vé
+- **Chọn Ghế**
+  - Sơ đồ ghế trực quan
+  - Hiển thị ghế đã đặt/còn trống
+  - Chọn nhiều ghế
+  - Tính tổng tiền tự động
+
+- **Thanh Toán**
+  - Nhiều phương thức thanh toán
+  - Mã giảm giá
+  - Xác nhận đặt vé
+  - Vé điện tử (QR Code)
+
+### 📱 Tiện Ích
+- **Thông Báo**
+  - Xác nhận đặt vé
+  - Nhắc nhở suất chiếu
+  - Khuyến mãi mới
+  - Cập nhật phim
+
+- **Rạp Phim**
+  - Danh sách rạp
+  - Thông tin chi tiết
+  - Bản đồ vị trí
+  - Đánh giá rạp
+
+### 👨‍💼 Quản Trị Viên (Admin)
+- **Quản Lý Phim**
+  - Thêm/sửa/xóa phim
+  - Cập nhật thông tin
+  - Quản lý lịch chiếu
+  - Thống kê doanh thu
+
+- **Quản Lý Rạp**
+  - Thêm/sửa/xóa rạp
+  - Quản lý phòng chiếu
+  - Sắp xếp lịch chiếu
+  - Báo cáo hiệu suất
+- **Quản Lý Người Dùng**
+  - Xem danh sách users
+  - Phân quyền
+  - Khóa/mở tài khoản
+  - Xử lý báo cáo
+
+- **Báo Cáo & Thống Kê**
+  - Doanh thu theo phim
+  - Thống kê đặt vé
+  - Báo cáo người dùng
+  - Phân tích xu hướng
+
+## 🎯 Ưu Điểm Nổi Bật
+- **Giao Diện Thân Thiện**
+  - Thiết kế hiện đại, dễ sử dụng
+  - Tương thích đa nền tảng
+  - Tối ưu hiệu năng
+  - Hỗ trợ đa ngôn ngữ
+
+- **Tính Năng Thông Minh**
+  - Đề xuất phim phù hợp
+  - Lưu lịch sử xem
+  - Tự động nhắc nhở
+  - Đồng bộ đa thiết bị
+
+- **Bảo Mật Cao**
+  - Xác thực hai lớp
+  - Mã hóa dữ liệu
+  - Bảo vệ thanh toán
+  - Quản lý phiên đăng nhập
 ---
 
 ## 🚀 CÔNG NGHỆ SỬ DỤNG
 
-### 🔰 Ngôn ngữ chính: **JavaScript**
 
-Toàn bộ hệ thống được phát triển chủ yếu bằng **JavaScript**, bao gồm cả frontend (mobile/web) và backend (server).
+### Frontend
+- **Framework:** React Native + Expo
+- **State Management:** Redux + Context API
+- **Navigation:** React Navigation (Stack + Tab)
+- **Network:** Axios
+- **Storage:** AsyncStorage
+- **UI Components:** React Native Elements, Vector Icons
+- **Authentication:** JWT
 
----
-
-### 1. 🧱 Framework & Core Libraries
-> Xây dựng ứng dụng mobile đa nền tảng (Android, iOS, Web)
-- `React Native`, `Expo`, `React`, `JavaScript`
-
-### 2. 🧭 Navigation
-> Quản lý điều hướng giữa các màn hình
-- `React Navigation`: Stack, Tab, Nested
-
-### 3. 📦 State Management
-> Quản lý dữ liệu dùng chung (global state)
-- `Redux`
-
-### 4. 🌐 Networking
-> Giao tiếp với backend API
-- `Axios`
-
-### 5. 🔐 Authentication & Token
-> Xác thực người dùng và bảo vệ route
-- `JWT`, kiểm tra và giải mã token
-
-### 6. 💾 Storage & Persistence
-> Lưu trữ cục bộ như token, giỏ vé, thông tin người dùng
-- `AsyncStorage`
-
-### 7. 🎨 UI Components & Utilities
-> Tạo và hiển thị giao diện: nút, modal, icon, mã QR,...
-- `React Native Elements`, `React Native Paper`, `Lottie`, `QRCode`, `Vector Icons`,...
-
-### 8. 📱 Device & Media Access
-> Truy cập camera, thư viện ảnh, thông tin thiết bị
-- `ImagePicker`, `Device Info`,...
-
-### 9. 🔧 Dev Tools
-> Hỗ trợ phát triển và cấu hình dự án
-- `Babel`, `dotenv`, `module-resolver`, `nodemon`
-
-### 10. 🖥️ Backend (API Server)
-> Xử lý logic, xác thực, truy xuất CSDL và gửi email
-- `Express.js`, `MongoDB`, `JWT`, `Nodemailer`, **JavaScript**
+### Backend
+- **Server:** Express.js
+- **Database:** MongoDB
+- **Authentication:** JWT
+- **Email Service:** Nodemailer
 
 ---
+## 🛠️ Setup and Installation
 
-## 🔋 Tính Năng Chính
+1. **Clone the repository**
+```sh
+git clone [repository-url]
+```
 
-- ✅ Đăng ký / Đăng nhập
-- 🎥 Xem phim đang chiếu và sắp chiếu
-- 🎞️ Xem thông tin chi tiết, trailer và giá vé
-- 🕒 Đặt vé theo lịch chiếu
-- 💳 Thanh toán tiện lợi
-- 👨‍💼 Quản trị viên:
-  - Quản lý phim
-  - Quản lý lịch chiếu
-  - Quản lý phòng chiếu
-
----
-
-## 🚀 Khởi Chạy Dự Án
-
-### Với ứng dụng React Native:
-
-```bash
+2. **Install Dependencies**
+- Frontend:
+```sh
 npm install
+```
+- Backend:
+```sh
+cd api
+npm install
+```
+
+3. **Environment Setup**
+Create `.env` files in root and `/api` directories:
+```sh
+# Root .env
+EXPO_PUBLIC_API_URL=your_api_url
+
+# /api/.env
+PORT=8000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET_KEY=your_secret
+```
+
+4. **Run the Application**
+- Frontend:
+```sh
 npm start
+```
+- Backend:
+```sh
+cd api
+npm start
+```
+
+## 📁 Project Structure
+```
+├── api/                 # Backend server
+│   ├── models/         # Database models
+│   ├── routes/         # API routes
+│   ├── middleware/     # Custom middleware
+│   └── utils/          # Utility functions
+├── components/         # Reusable components
+├── screens/           # Application screens
+├── navigation/        # Navigation configuration
+├── redux/            # Redux state management
+└── assets/           # Static assets
+```
+
+
+---
+
+
