@@ -164,8 +164,24 @@ cd api
 npm start
 ```
 📝 Tệp Cấu hình Môi trường (.env)
-Tạo một tệp .env ở thư mục gốc của frontend với các nội dung sau:
-EXPO_PUBLIC_API_URL=http://<địa chỉ ip mạng>:8000
+
+# Frontend Environment Configuration
+
+# API Configuration
+REACT_APP_API_URL=http://localhost:8000
+REACT_APP_API_TIMEOUT=30000
+
+# Authentication
+REACT_APP_JWT_SECRET=your_jwt_secret
+REACT_APP_TOKEN_EXPIRES=7
+
+# Features Configuration
+REACT_APP_DEFAULT_LANGUAGE=vi
+REACT_APP_ITEMS_PER_PAGE=10
+
+# Payment Integration
+REACT_APP_PAYMENT_GATEWAY=vnpay
+REACT_APP_VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
 
 Tạo một tệp .env ở thư mục gốc của backend với các nội dung sau:
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=<app_name>
