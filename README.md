@@ -167,16 +167,18 @@ npm start
 
 - Frontend:
 ```sh
-expo start
+EXPO_PUBLIC_API_URL=http://<địa chỉ ip mạng>:8000
 ```
 
-Tạo một tệp .env ở thư mục gốc của backend với các nội dung sau:
+- Backend:
+```sh
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=<app_name>
 
 EMAIL_USER=<your_email@example.com>
 EMAIL_PASS=<your_app_password>
 
 JWT_SECRET_KEY=<your_jwt_secret_key>
+```
 
 
 ## 📁 Project Structure
